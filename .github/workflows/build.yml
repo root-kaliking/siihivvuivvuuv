@@ -1,0 +1,45 @@
+name: Build BedWars1058 (Paper 1.21.11)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build with Maven on JDK 21
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: maven
+
+      # Paper 1.21.11 Mojang-mapped dev bundle is not published to any public Maven
+      # repository, so we ship it in libs/ and register it into the local repository.
+      - name: Install Paper 1.21.11 Mojang-mapped jar
+        run: |
+          mvn -B -q install:install-file \
+            -Dfile=libs/paper-mojang-1.21.11.jar \
+            -DgroupId=dev.papermc.paper \
+            -DartifactId=paper \
+            -Dversion=1.21.11-R0.1-SNAPSHOT \
+            -Dpackaging=jar \
+            -DgeneratePom=true
+
+      - name: Build with Maven
+        run: mvn -B -ntp package -DskipTests -Dmaven.javadoc.skip=true
+
+      - name: Upload plugin artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: BedWars1058-paper-1.21.11
+          path: bedwars-plugin/target/*.jar
+          if-no-files-found: error
